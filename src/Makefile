@@ -1,0 +1,4 @@
+build:
+	echo test
+	ls
+
