@@ -1,5 +1,5 @@
 all: build clean
 build:
-	g++ -Wall -Wextra -o test.exe main.cpp lib/logger.cpp
+	g++ -Wall -Wextra --std=c++17 -o test.exe main.cpp lib/logger.cpp
 clean:
 	echo empty

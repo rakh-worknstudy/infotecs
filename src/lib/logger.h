@@ -22,12 +22,14 @@ public:
     /// @brief Logging levels
     enum Level : int
     {
-        DEBUG = 0,
+        BEGIN = 0,
+        DEBUG = BEGIN,
         INFO,
         NOTICE,
         WARNING,
         ERROR,
         CRITICAL,
+        END = CRITICAL,
         DEFAULT = INFO
     };
 
@@ -42,6 +44,7 @@ public:
     bool isJournalOpen( void ) const;
     ReturnCode log( const Level level, const std::string msg ) const;
 
+public:
     /// @brief Check if logging level is valid
     /// @param[in] level Logging level
     /// @return true - valid, else - false
@@ -50,11 +53,18 @@ public:
     /// @param[in] level Logging level
     /// @return Logging level text string
     static const std::string& levelToString( const Level level );
-
 private:
     std::unique_ptr< std::ofstream > _logFileOut;
     Level _level;
- };
+
+private:
+    /// @brief Get current date and time string
+    /// return Resulting date and time string
+    static const std::string getDateTimeString( void );
+    /// @brief Max possible length for a level string
+    /// return Max length for a level string
+    static constexpr int levelStringMaxLength( void );
+};
 
 
 #endif  // LOGGER_H_

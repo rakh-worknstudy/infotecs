@@ -1,10 +1,13 @@
 #include "logger.h"
 
+#include <ctime>
 #include <fstream>
+#include <iomanip>
 #include <map>
 #include <memory>
 #include <string>
 #include <sstream>
+
 
 Logger::Logger( std::unique_ptr< std::ofstream > logFileOut , const Level level ) : _logFileOut( std::move( logFileOut) )
 {
@@ -30,37 +33,35 @@ Logger::~Logger()
 
 Logger::ReturnCode Logger::setLevel( const Level level )
 {
-    log( Level::DEBUG, "setLevel() called" );
     const std::string levelStr( levelToString( level ) );
-    std::stringstream message;
+    std::ostringstream msgOss;
+    msgOss << "setLevel(): changing log level to " << levelStr;
+    log( Level::NOTICE, msgOss.str() );
     if( level == _level )
     {
-        message << "Log level is already " << levelStr << "\n";
-        log( Level::NOTICE, message.str() );
+        msgOss.str( std::string() );
+        msgOss << "setLevel(): log level is already " << levelStr;
+        log( Level::NOTICE, msgOss.str() );
     }
     else
     {
-        message << "Changing log level to " << levelStr << "\n";
-        log( Level::NOTICE, message.str() );
         _level = level;
     }
+
     return ReturnCode::Ok;
 }
 Logger::Level Logger::getLevel() const
 {
-    log( Level::DEBUG, "getLevel() called" );
     return _level;
 }
 
 Logger::ReturnCode Logger::setJournal( const std::string journal )
 {
-    log( Level::DEBUG, "setJournal() called" );
     return ReturnCode::Ok;
 }
 
 bool Logger::isJournalOpen() const
 {
-    log( Level::DEBUG, "isJournalOpen() called" );
     return _logFileOut->is_open();
 }
 
@@ -71,11 +72,15 @@ Logger::ReturnCode Logger::log( const Level level, const std::string msg ) const
         return ReturnCode::JournalUnspecified;
     }
     if( level >= _level )
-    {
-        std::stringstream logMsg;
+    { 
+        std::ostringstream fullMsgOss;
+        const std::string dateTimeString( getDateTimeString() );
         const std::string levelString( levelToString( level ) );
-        logMsg << "< " << levelString << " > " << msg << "\n";
-        _logFileOut->write( logMsg.str().c_str(), logMsg.str().length() );
+        fullMsgOss << std::left;
+        fullMsgOss << dateTimeString;
+        fullMsgOss << " [ " << std::setw( levelStringMaxLength() ) << levelString << " ] ";
+        fullMsgOss << msg << "\n";
+        _logFileOut->write( fullMsgOss.str().c_str(), fullMsgOss.str().length() );
         _logFileOut->flush();
     }
     return ReturnCode::Ok;
@@ -87,7 +92,7 @@ Logger::ReturnCode Logger::log( const Level level, const std::string msg ) const
 bool Logger::isValidLevel( const Logger::Level level )
 {
     bool isValid = true;
-    if( Level::DEBUG > level || Level::CRITICAL < level )
+    if( Level::BEGIN > level || Level::END < level )
     {
         isValid = false;
     }
@@ -111,7 +116,35 @@ const std::string& Logger::levelToString( const Level level )
         return search->second;
     }
 
-    const static std::string unknownLevelString( "Unknown logging level" );
+    const static std::string unknownLevelString( "UNKNOWN" );
     return unknownLevelString;
+}
+
+/// @brief Max possible length for a level string
+/// return Max length for a level string
+inline constexpr int Logger::levelStringMaxLength()
+{
+    std::size_t maxLength = 0;
+    for( int level = Level::BEGIN; level <= Level::END + 1; ++level )
+    {
+        const std::size_t currentStringLength{ levelToString( static_cast< Level >( level ) ).length() };
+        if( currentStringLength > maxLength )
+        {
+            maxLength = currentStringLength;
+        }
+    }
+    return static_cast< int >( maxLength );
+}
+
+/// @brief Get current date and time string
+/// param[out] dateTimeStr Resulting date and time string
+const std::string Logger::getDateTimeString()
+{
+    std::time_t _time;
+    std::time( &_time );
+
+    std::ostringstream dateTimeStringOss;
+    dateTimeStringOss << std::put_time( std::localtime( &_time ), "%F %T" );
+    return dateTimeStringOss.str();
 }
 

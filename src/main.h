@@ -19,7 +19,7 @@ Logger::ReturnCode closeLogger( Logger*& logger );
 /// @param[in] level Log level
 /// @param[in] msg Log message
 /// @return ReturnCode::ok if successful, else - error type
-Logger::ReturnCode log( Logger* logger, const Logger::Level level, const std::string msg );
+Logger::ReturnCode log( const Logger* logger, const Logger::Level level, const std::string msg );
 
 int main( void );
 
