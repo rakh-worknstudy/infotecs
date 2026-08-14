@@ -1,22 +1,25 @@
 #ifndef LOGGER_H_
 #define LOGGER_H_
 
+#include <fstream>
+#include <memory>
 #include <string>
 
-
-namespace logger
+// @brief Logger main class
+class Logger
 {
+public:
+    /// @brief Return codes for working with logger class 
     enum class ReturnCode
     {
-        Ok,                 // Successful initialization
+        Ok,                 // Success
         JournalUnspecified, // No journal path given
         JournalNoopen,      // Unable to open a journal
         LevelUnknown,       // Unknown logging level given
-        DescUnknown,        // Bad logger descriptor given
-        DescExcessive,      // Too many loggers opened/Out of maxval
-        Fatal               // Unspecified fatal error (Unknown)
+        LoggerNullptr,      // No logger ptr given
+        Fatal               // Unknown fatal error
     };
-
+    /// @brief Logging levels
     enum Level : int
     {
         DEBUG = 0,
@@ -24,26 +27,33 @@ namespace logger
         NOTICE,
         WARNING,
         ERROR,
-        CRITICAL
+        CRITICAL,
+        DEFAULT = INFO
     };
 
-    /// @brief Logger initialization function
-    /// @param[in] journal Journal path
+    Logger( const std::string journal, const Level level );
+    Logger( void );
+    ~Logger();
+
+    ReturnCode setLevel( const Level level );
+    Level getLevel( void ) const;
+    ReturnCode setJournal( const std::string journal );
+    bool isJournalOpen( void ) const;
+    ReturnCode log( const Level level, const std::string msg );
+
+    /// @brief Check if logging level is valid
     /// @param[in] level Logging level
-    /// @param[out] desc Logger descriptor
-    /// @return ReturnCode::Ok if successful, else - error type
-    ReturnCode init( const std::string journal, const logger::Level level, int& desc );
-    /// @brief Logger closing function
-    /// @param[in] desc To-close logger descriptor
-    /// @return ReturnCode::Ok if successful, else - error type
-    ReturnCode close( const int desc );
-    /// @brief Log by logger descriptor
-    /// @param[in] desc Logger descriptor
-    /// @param[in] level Log level
-    /// @param[in] msg Log message
-    /// @return ReturnCode::ok if successful, else - error type
-    ReturnCode log( const int desc, const logger::Level level, const std::string msg );
-}
+    /// @return true - valid, else - false
+    static bool isValidLevel( const Level level );
+    /// @brief \"Convert\" logging level to a string
+    /// @param[in] level Logging level
+    /// @return Logging level text string
+    static const std::string& levelToString( const Level level );
+
+private:
+    std::ofstream _logFileOut;
+    Level _level;
+ };
 
 
 #endif  // LOGGER_H_

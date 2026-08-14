@@ -1,150 +1,112 @@
 #include "logger.h"
 
 #include <fstream>
+/* debug */ #include <iostream>
 #include <map>
-#include <pair>
+#include <memory>
 #include <string>
 #include <sstream>
 
-namespace
+
+Logger::Logger( const std::string journal, const Level level ) : _logFileOut( journal )
 {
-namespace logger
+    _level = level;
+    /* debug */ std::cout << "Logger() ok" << std::endl;
+}
+Logger::Logger() : _logFileOut()
 {
-    // @brief Logger main class
-    class Logger
+    _level = Level::DEFAULT;
+}
+Logger::~Logger()
+{
+    if( _logFileOut.is_open() )
     {
-    public:
-        Logger( const Level _level );
-        Logger( void );
-        ~Logger();
+        log( Level::INFO, "Closing logger" );
+        _logFileOut.close();
+    }
+}
 
-        ReturnCode setLevel( const Level _level );
-        ReturnCode getLevel( void );
-        ReturnCode setJournal( const std::string& journal );
-        void log( const Level _level, const std::stringstream _smsg );
+Logger::ReturnCode Logger::setLevel( const Level level )
+{
+    const std::string levelStr( levelToString( level ) );
+    std::stringstream message;
+    if( level == _level )
+    {
+        message << "Log level is already " << levelStr << "\n";
+        log( Level::NOTICE, message.str() );
+    }
+    else
+    {
+        message << "Changing log level to " << levelStr << "\n";
+        log( Level::NOTICE, message.str() );
+        _level = level;
+    }
+    return ReturnCode::Ok;
+}
+Logger::Level Logger::getLevel() const
+{
+    return _level;
+}
 
-    private:
-        static constexpr Level levelDefault = Level::INFO;
-        int desc;
-        Level level;
-        std::ofstream logFileOut;
+Logger::ReturnCode Logger::setJournal( const std::string journal )
+{
+    return ReturnCode::Ok;
+}
+
+bool Logger::isJournalOpen() const
+{
+    return _logFileOut.is_open();
+}
+
+Logger::ReturnCode Logger::log( const Level level, const std::string msg )
+{
+    /* debug */ std::cout << "_logFileOut.is_open() = " << _logFileOut.is_open() << std::endl;
+    if( !_logFileOut.is_open() )
+    {
+        return ReturnCode::JournalUnspecified;
+    }
+    if( level >= _level )
+    {
+       std::cout << "trying to write\n";
+       _logFileOut << msg << std::endl;
+       std::cout <<"SUCCESS" << std::endl;
+    }
+    return ReturnCode::Ok;
+}
+
+/// @brief Check if logging level is valid
+/// @param[in] level Logging level
+/// @return true - valid, else - false
+bool Logger::isValidLevel( const Logger::Level level )
+{
+    bool isValid = true;
+    /* debug */ std::cout << "DEBUG = " << Level::DEBUG << "\nlevel = " << level << "\nCRITICAL = " << Level::CRITICAL << std::endl;
+    if( Level::DEBUG > level || Level::CRITICAL < level )
+    {
+        isValid = false;
+    }
+    /* debug */ std::cout << "isValid = " << isValid << std::endl;
+    return isValid;
+}
+
+const std::string& Logger::levelToString( const Level level )
+{
+    const std::map< Logger::Level, std::string > levelToStringMap =
+    {
+        { Level::DEBUG, "DEBUG" },
+        { Level::INFO, "INFO" },
+        { Level::NOTICE, "NOTICE" },
+        { Level::WARNING, "WARNING" },
+        { Level::ERROR, "ERROR" },
+        { Level::CRITICAL, "CRITICAL" }
     };
-
-
-    constexpr unsigned char descMin = 1;
-    constexpr unsigned char descMax = 255;
-    std::map< const unsigned char, Logger* > loggerByDesc;
-
-    /// @brief Check if logging level is valid
-    /// @param[in] level Logging level
-    /// @return true - valid, else - false
-    bool isValidLogLevel( const logger::Level level );
-    int 
-
-}  // namespace logger
-}  // namespace unnamed
-
-
-// Header
-namespace logger
-{
-    /// @brief Logger initialization function
-    /// @param[in] journal Journal path
-    /// @param[in] level Logging level
-    /// @param[out] desc Logger descriptor
-    /// @return ReturnCode::Ok if successful, else - error type
-    ReturnCode init( const std::string journal, const Level level, int& desc )
+    auto search = levelToStringMap.find( level );
+    if( levelToStringMap.end() != search )
     {
-        ReturnCode retval = ReturnCode::Fatal;
-        if( journal.empty() )
-        {
-            retval = ReturnCode::JournalUnspecified;
-        }
-        else if( !isValidLogLevel( level ) )
-        {
-            retval = ReturnCode::LevelUnknown;
-        }
-        else
-            Logger* _logger = loggerByDesc[ static_cast< unsigned char > desc ];
-        {
-            Logger _logger = new Logger( level );
-            retval = ReturnCode::Ok;
-        }
-        return retval; 
-    }
-    /// @brief Logger closing function
-    /// @param[in] desc To-close logger descriptor
-    /// @return ReturnCode::Ok if successful, else - error type
-    ReturnCode close( const int desc )
-    {
-        Logger* _logger = loggerByDesc[ static_cast< unsigned char > desc ];
-        ReturnCode retval = ReturnCode::Fatal;
-        if( desc < static_cast< int > descMin || desc > static_cast< int > descMax )
-        {
-            retval = ReturnCode::DescExcessive;
-        }
-        else
-        {
-            const auto loggerByDescSearch( loggerByDesc.find( static< unsigned char > desc );
-            if( loggerByDesc.end() == loggerByDescPair )
-            {
-                retval = ReturnCode::DescUnknown;
-            }
-            else
-            {
-                Logger* _logger = loggerByDescSearch->second;
-                loggerByDesc.erase( loggerByDescPair );
-                delete _logger;
-                retval = ReturnCode::Ok;
-            }
-    }
-    /// @brief Log by logger descriptor
-    /// @param[in] desc Logger descriptor
-    /// @param[in] level Log level
-    /// @param[in] msg Log message
-    /// @return ReturnCode::ok if successful, else - error type
-    ReturnCode log( const int desc, const logger::Level level, const std::string msg )
-    {
-        ReturnCode retval = ReturnCode::Fatal;
-
-        return ReturnCode::Ok;
-    }
-}  // namepsace logger
-
-
-namespace
-{
-namespace logger
-{
-    Logger::Logger( const Level _level )
-    {
-        this->level = level;
-    }
-    Logger::Logger()
-    {
-        Logger( levelDefault );
-    }
-    Logger::~Logger()
-    {
-        if( logFileOff.is_open() )
-        {
-            const std::string
-            this->log( level::INFO, "Closing logger[%], 
-        }
+        return search->second;
     }
 
-    /// @brief Check if logging level is valid
-    /// @param[in] level Logging level
-    /// @return true - valid, else - false
-    bool isValidLogLevel( const logger::Level level )
-    {
-        bool isValid = true;
-        if( logger::Level::DEBUG < level || logger::Level::Critical > level )
-        {
-            isValid = false;
-        }
-        return isValid;
-    }
-}  // namespace loggeer
-}  // namespace unnamed
+    const static std::string unknownLevelString( "Unknown logging level" );
+    return unknownLevelString;
+}
 

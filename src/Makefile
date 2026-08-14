@@ -1,4 +1,5 @@
+all: build clean
 build:
-	echo test
-	ls
-
+	g++ -Wall -Wextra -o test.exe main.cpp lib/logger.cpp
+clean:
+	echo empty
