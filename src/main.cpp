@@ -36,18 +36,18 @@ Logger::ReturnCode initLogger( const std::string journal, const Logger::Level le
     else
     {
         std::string journal( "test.txt" );
-        logger = new Logger( journal, level );
-        if( nullptr != logger )
+        std::unique_ptr< std::ofstream > logFileOut = std::make_unique< std::ofstream >( journal );
+        if( !logFileOut->is_open() )
         {
-            if( !logger->isJournalOpen() )
-            {
-                retval = Logger::ReturnCode::JournalNoopen;
-                delete( logger );
-            }
-            else
-            {
-                retval = Logger::ReturnCode::Ok;
-            }
+            retval = Logger::ReturnCode::JournalNoopen;
+        }
+        else if( nullptr != ( logger = new Logger( journal, level ) ) )
+        {
+            retval = Logger::ReturnCode::Ok;
+        }
+        else
+        {
+            logFileOut->close();
         }
     }
 
@@ -76,7 +76,7 @@ Logger::ReturnCode closeLogger( Logger*& logger )
     }
     else
     {
-        logger->log( Logger::Level::DEBUG, "Closing the logger" );
+        logger->log( Logger::Level::DEBUG, "closeLogger(): closing the logger" );
         delete( logger );
         logger = nullptr;
         retval = Logger::ReturnCode::Ok;

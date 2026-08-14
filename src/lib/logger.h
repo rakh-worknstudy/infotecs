@@ -31,6 +31,7 @@ public:
         DEFAULT = INFO
     };
 
+    Logger( std::unique_ptr< std::ofstream > logFileOut, const Level level );
     Logger( const std::string journal, const Level level );
     Logger( void );
     ~Logger();
@@ -39,7 +40,7 @@ public:
     Level getLevel( void ) const;
     ReturnCode setJournal( const std::string journal );
     bool isJournalOpen( void ) const;
-    ReturnCode log( const Level level, const std::string msg );
+    ReturnCode log( const Level level, const std::string msg ) const;
 
     /// @brief Check if logging level is valid
     /// @param[in] level Logging level
@@ -51,7 +52,7 @@ public:
     static const std::string& levelToString( const Level level );
 
 private:
-    std::ofstream _logFileOut;
+    std::unique_ptr< std::ofstream > _logFileOut;
     Level _level;
  };
 

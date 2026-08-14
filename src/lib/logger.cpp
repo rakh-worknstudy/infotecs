@@ -1,17 +1,19 @@
 #include "logger.h"
 
 #include <fstream>
-/* debug */ #include <iostream>
 #include <map>
 #include <memory>
 #include <string>
 #include <sstream>
 
-
-Logger::Logger( const std::string journal, const Level level ) : _logFileOut( journal )
+Logger::Logger( std::unique_ptr< std::ofstream > logFileOut , const Level level ) : _logFileOut( std::move( logFileOut) )
 {
     _level = level;
-    /* debug */ std::cout << "Logger() ok" << std::endl;
+}
+Logger::Logger( const std::string journal, const Level level )
+{
+    _logFileOut = std::make_unique< std::ofstream >( journal );
+    _level = level;
 }
 Logger::Logger() : _logFileOut()
 {
@@ -19,15 +21,16 @@ Logger::Logger() : _logFileOut()
 }
 Logger::~Logger()
 {
-    if( _logFileOut.is_open() )
+    if( _logFileOut->is_open() )
     {
-        log( Level::INFO, "Closing logger" );
-        _logFileOut.close();
+        log( Level::INFO, "Closing the logger" );
+        _logFileOut->close();
     }
 }
 
 Logger::ReturnCode Logger::setLevel( const Level level )
 {
+    log( Level::DEBUG, "setLevel() called" );
     const std::string levelStr( levelToString( level ) );
     std::stringstream message;
     if( level == _level )
@@ -45,31 +48,35 @@ Logger::ReturnCode Logger::setLevel( const Level level )
 }
 Logger::Level Logger::getLevel() const
 {
+    log( Level::DEBUG, "getLevel() called" );
     return _level;
 }
 
 Logger::ReturnCode Logger::setJournal( const std::string journal )
 {
+    log( Level::DEBUG, "setJournal() called" );
     return ReturnCode::Ok;
 }
 
 bool Logger::isJournalOpen() const
 {
-    return _logFileOut.is_open();
+    log( Level::DEBUG, "isJournalOpen() called" );
+    return _logFileOut->is_open();
 }
 
-Logger::ReturnCode Logger::log( const Level level, const std::string msg )
+Logger::ReturnCode Logger::log( const Level level, const std::string msg ) const
 {
-    /* debug */ std::cout << "_logFileOut.is_open() = " << _logFileOut.is_open() << std::endl;
-    if( !_logFileOut.is_open() )
+    if( !_logFileOut->is_open() )
     {
         return ReturnCode::JournalUnspecified;
     }
     if( level >= _level )
     {
-       std::cout << "trying to write\n";
-       _logFileOut << msg << std::endl;
-       std::cout <<"SUCCESS" << std::endl;
+        std::stringstream logMsg;
+        const std::string levelString( levelToString( level ) );
+        logMsg << "< " << levelString << " > " << msg << "\n";
+        _logFileOut->write( logMsg.str().c_str(), logMsg.str().length() );
+        _logFileOut->flush();
     }
     return ReturnCode::Ok;
 }
@@ -80,12 +87,10 @@ Logger::ReturnCode Logger::log( const Level level, const std::string msg )
 bool Logger::isValidLevel( const Logger::Level level )
 {
     bool isValid = true;
-    /* debug */ std::cout << "DEBUG = " << Level::DEBUG << "\nlevel = " << level << "\nCRITICAL = " << Level::CRITICAL << std::endl;
     if( Level::DEBUG > level || Level::CRITICAL < level )
     {
         isValid = false;
     }
-    /* debug */ std::cout << "isValid = " << isValid << std::endl;
     return isValid;
 }
 
