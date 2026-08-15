@@ -11,39 +11,40 @@
 #include <sstream>
 
 /// @brief Main logger constructor
-Logger::Logger( const std::string filePath, const Level level ) : _fileOut(), _filePath()
+Logger::Logger( const std::string filePath, const Level level ) : _fileOut(), _filePath(), _level( level )
 {
     ReturnCode isOk = getAbsolutePath( filePath, _filePath );
     if( ReturnCode::Ok == isOk )
     {
         _fileOut = std::make_unique< std::ofstream >( _filePath.c_str() );
     }
-    _level = level;
 }
-Logger::Logger() : _fileOut(), _filePath()
-{
-    _level = Level::DEFAULT;
-}
+Logger::Logger() : _fileOut(), _filePath(), _level( Level::DEFAULT ) {}
 Logger::~Logger()
 {
-    if( _fileOut->is_open() )
+    if( ReturnCode::Ok == isJournalOpen() && _level <= Level::NOTICE )
     {
-        log( Level::INFO, "Closing the logger" );
+        std::stringstream closeMsgOff;
+        closeMsgOff << "~Logger(): closing the journal file " << _filePath;
+        write( Level::NOTICE, closeMsgOff.str() );
         _fileOut->close();
     }
 }
 
+/// @brief Set new logging level
+/// param[in] level New logging level
+/// return ReturnCode::Ok if successful, else - error code
 Logger::ReturnCode Logger::setLevel( const Level level )
 {
     const std::string levelStr( levelToString( level ) );
     std::ostringstream msgOss;
     msgOss << "setLevel(): changing log level to " << levelStr;
-    log( Level::NOTICE, msgOss.str() );
+    write( Level::NOTICE, msgOss.str() );
     if( level == _level )
     {
         msgOss.str( std::string() );
         msgOss << "setLevel(): log level is already " << levelStr;
-        log( Level::NOTICE, msgOss.str() );
+        write( Level::NOTICE, msgOss.str() );
     }
     else
     {
@@ -52,40 +53,72 @@ Logger::ReturnCode Logger::setLevel( const Level level )
 
     return ReturnCode::Ok;
 }
+
+/// @brief Get current logging level
+/// return Logging level
 Logger::Level Logger::getLevel() const
 {
     return _level;
 }
 
+/// @brief Sets a new journal for the logger
+/// param[in] filePath File path to the journal
+/// return ReturnCode::Ok if successful, else - error code
 Logger::ReturnCode Logger::setJournal( const std::string filePath )
 {
-    return ReturnCode::Ok;
-}
-
-bool Logger::isJournalOpen() const
-{
-    return _fileOut->is_open();
-}
-
-Logger::ReturnCode Logger::log( const Level level, const std::string msg ) const
-{
-    if( !_fileOut->is_open() )
+    ReturnCode retval = ReturnCode::Fatal;
+    if( filePath.empty() )
     {
-        return ReturnCode::JournalUnspecified;
-    }
-    if( level >= _level )
-    { 
-        std::ostringstream fullMsgOss;
-        const std::string dateTimeString( getDateTimeString() );
-        const std::string levelString( levelToString( level ) );
-        fullMsgOss << std::left;
-        fullMsgOss << dateTimeString;
-        fullMsgOss << " [ " << std::setw( levelStringMaxLength() ) << levelString << " ] ";
-        fullMsgOss << msg << "\n";
-        _fileOut->write( fullMsgOss.str().c_str(), fullMsgOss.str().length() );
-        _fileOut->flush();
+
     }
     return ReturnCode::Ok;
+}
+
+/// @brief Check if journal is currently open
+/// return true if file is open, else - false
+Logger::ReturnCode Logger::isJournalOpen() const
+{
+    ReturnCode retval = ReturnCode::Fatal;
+    if( !_fileOut )
+    {
+        retval = ReturnCode::JournalUnspecified;
+    }
+    else if( !_fileOut->is_open() )
+    {
+        retval = ReturnCode::JournalNoopen;
+    }
+    else
+    {
+        retval = ReturnCode::Ok;
+    }
+    return retval;
+}
+
+/// @brief Main logging function
+/// Attempts to log a message of a specified level in format:
+/// YYYY-MM-DD HH:MM:SS [ %level%  ] %message%\n
+/// param[in] level Level of the logged message
+/// param[in] msg The message itself
+/// return ReturnCode::Ok if successful, else - error code
+Logger::ReturnCode Logger::write( const Level level, const std::string msg ) const
+{
+    ReturnCode retval{ isJournalOpen() };
+    if( ReturnCode::Ok == retval )
+    {
+        if( level >= _level )
+        {
+            std::ostringstream fullMsgOss;
+            const std::string dateTimeString( getDateTimeString() );
+            const std::string levelString( levelToString( level ) );
+            fullMsgOss << std::left;
+            fullMsgOss << dateTimeString;
+            fullMsgOss << " [ " << std::setw( levelStringMaxLength() ) << levelString << " ] ";
+            fullMsgOss << msg << "\n";
+            _fileOut->write( fullMsgOss.str().c_str(), fullMsgOss.str().length() );
+            _fileOut->flush();
+        }
+    }
+    return retval;
 }
 
 /// @brief Check if logging level is valid
@@ -94,13 +127,16 @@ Logger::ReturnCode Logger::log( const Level level, const std::string msg ) const
 bool Logger::isValidLevel( const Logger::Level level )
 {
     bool isValid = true;
-    if( Level::BEGIN > level || Level::END < level )
+    if( Level::FIRST > level || Level::LAST < level )
     {
         isValid = false;
     }
     return isValid;
 }
 
+/// @brief \"Convert\" logging level to a string
+/// @param[in] level Logging level
+/// @return Logging level text string
 const std::string& Logger::levelToString( const Level level )
 {
     const std::map< Logger::Level, std::string > levelToStringMap =
@@ -122,8 +158,7 @@ const std::string& Logger::levelToString( const Level level )
     return unknownLevelString;
 }
 
-
-/// @brief Get absolute path of path
+/// @brief Get an absolute path of a given path
 /// param[in] path Given path
 /// param[out] absolutePath Absolute path from given
 /// return ReturnCode::Ok if successful, else - error type
@@ -157,9 +192,9 @@ Logger::ReturnCode Logger::getAbsolutePath( const std::string& path, std::string
 inline constexpr int Logger::levelStringMaxLength()
 {
     std::size_t maxLength{ 0 };
-    for( int level = Level::BEGIN; level <= Level::END + 1; ++level )
+    for( int level = Level::FIRST; level <= Level::LAST + 1; ++level )
     {
-        const std::size_t currentStringLength{ levelToString( static_cast< Level >( level ) ).length() };
+        const std::size_t currentStringLength{ levelToString( static_cast< Logger::Level >( level ) ).length() };
         if( currentStringLength > maxLength )
         {
             maxLength = currentStringLength;

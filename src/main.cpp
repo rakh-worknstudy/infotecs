@@ -52,18 +52,22 @@ Logger::ReturnCode initLogger( const std::string journal, const Logger::Level le
         logger = new Logger( journal, level );
         if( nullptr != logger )
         {
-            // No fail upon new
-            if( logger->isJournalOpen() )
+            // No fail upon 'new Logger(..)'
+            // Get journal opening status
+            Logger::ReturnCode journalStatus{ logger->isJournalOpen() };
+            if( Logger::ReturnCode::Ok == journalStatus )
             {
                 // Successful initalization
                 retval = Logger::ReturnCode::Ok;
             }
-            else
+            else if( Logger::ReturnCode::JournalNoopen == journalStatus )
             {
-                // Journal didn't open
+                // Journal coudln't open
                 retval = Logger::ReturnCode::JournalNoopen;
             }
-        }  // else Logger() failed (FATAL)
+            // else Logger(..) inner failure (ReturnCode::Fatal)
+        }
+        // else Logger(..) failure (ReturnCode::Fatal);
     }
 
     if( Logger::ReturnCode::Ok != retval )
@@ -91,7 +95,7 @@ Logger::ReturnCode closeLogger( Logger*& logger )
     }
     else
     {
-        logger->log( Logger::Level::DEBUG, "closeLogger(): closing the logger" );
+        logger->write( Logger::Level::DEBUG, "closeLogger(): closing the logger" );
         delete( logger );
         logger = nullptr;
         retval = Logger::ReturnCode::Ok;
@@ -118,7 +122,7 @@ Logger::ReturnCode log( const Logger* logger, const Logger::Level level, const s
         std::cerr << "Unable to log: " << returnCodeToString( retval );
     };
 
-    retval = logger->log( level, msg );
+    retval = logger->write( level, msg );
 
     if( Logger::ReturnCode::Ok != retval )
     {
@@ -198,7 +202,7 @@ namespace test
     int iterateEachLevelAndLogEachLevel( Logger*& logger )
     {
         std::cout << "Trying to iterate all log levels..." << std::endl; 
-        for( int level = Logger::Level::BEGIN; level <= Logger::Level::END; ++level )
+        for( int level = Logger::Level::FIRST; level <= Logger::Level::LAST; ++level )
         {
             const Logger::Level levelCast{ static_cast< Logger::Level >( level ) };
             std::cout << "Setting log level to " << Logger::levelToString( levelCast ) << std::endl;

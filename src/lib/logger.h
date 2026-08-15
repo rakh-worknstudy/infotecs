@@ -9,7 +9,7 @@
 class Logger
 {
 public:
-    /// @brief Return codes for working with logger class 
+    /// @brief Return codes for Logger class
     enum class ReturnCode
     {
         Ok,                 // Success
@@ -19,29 +19,46 @@ public:
         LoggerNullptr,      // No logger ptr given
         Fatal               // Unknown fatal error
     };
+
     /// @brief Logging levels
     enum Level : int
     {
-        BEGIN = 0,
-        DEBUG = BEGIN,
-        INFO,
-        NOTICE,
-        WARNING,
-        ERROR,
-        CRITICAL,
-        END = CRITICAL,
-        DEFAULT = INFO
+        FIRST       = 0,  // First element of Logger::Level (for iteration)
+        DEBUG   = FIRST,  // Debug level    (0)
+        INFO        = 1,  // Info level     (1)
+        NOTICE      = 2,  // Notice level   (2)
+        WARNING     = 3,  // Warning level  (3)
+        ERROR       = 4,  // Error level    (4)
+        CRITICAL    = 5,  // Critical level (5)
+        LAST = CRITICAL,  // Last elelemt of Logger::Level (for iteration)
+        DEFAULT  = INFO   // Default level (=1)
     };
 
     Logger( const std::string filePath, const Level level );
     Logger( void );
     ~Logger();
 
+    /// @brief Set new logging level
+    /// param[in] level New logging level
+    /// return ReturnCode::Ok if successful, else - error code
     ReturnCode setLevel( const Level level );
+    /// @brief Get current logging level
+    /// return Logging level
     Level getLevel( void ) const;
+    /// @brief Sets a new journal for the logger
+    /// param[in] filePath File path to the journal
+    /// return ReturnCode::Ok if successful, else - error code
     ReturnCode setJournal( const std::string filePath );
-    bool isJournalOpen( void ) const;
-    ReturnCode log( const Level level, const std::string msg ) const;
+    /// @brief Check if journal is currently open
+    /// return ReturnCode::Ok if file is open, else - error code
+    ReturnCode isJournalOpen( void ) const;
+    /// @brief Main logging function
+    /// Attempts to log a message of a specified level in format:
+    /// YYYY-MM-DD HH:MM:SS [ %level%  ] %message%\n
+    /// param[in] level Level of the logged message
+    /// param[in] msg The message itself
+    /// return ReturnCode::Ok if successful, else - error code
+    ReturnCode write( const Level level, const std::string msg ) const;
 public:
     /// @brief Check if logging level is valid
     /// @param[in] level Logging  level
@@ -57,7 +74,10 @@ private:
     std::string _filePath;
     Level _level;
 private:
-    /// @brief Get absolute path of path
+    /// @brief \"Convert\" logging level to a string
+    /// @param[in] level Logging level
+    /// @return Logging level text string
+    /// @brief Get an absolute path of a given path
     /// param[in] path Given path
     /// param[out] absolutePath Absolute path from given
     /// return ReturnCode::Ok if successful, else - error type
@@ -69,7 +89,6 @@ private:
     /// return Max length for a level string
     static constexpr int levelStringMaxLength( void );
 };
-
 
 #endif  // LOGGER_H_
 
