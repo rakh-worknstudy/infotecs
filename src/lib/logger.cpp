@@ -16,19 +16,13 @@ Logger::Logger( const std::string filePath, const Level level ) : _fileOut(), _f
     ReturnCode isOk = getAbsolutePath( filePath, _filePath );
     if( ReturnCode::Ok == isOk )
     {
-        _fileOut = std::make_unique< std::ofstream >( _filePath.c_str() );
+        tryOpenJournal();
     }
 }
 Logger::Logger() : _fileOut(), _filePath(), _level( Level::DEFAULT ) {}
 Logger::~Logger()
 {
-    if( ReturnCode::Ok == isJournalOpen() && _level <= Level::NOTICE )
-    {
-        std::stringstream closeMsgOff;
-        closeMsgOff << "~Logger(): closing the journal file " << _filePath;
-        write( Level::NOTICE, closeMsgOff.str() );
-        _fileOut->close();
-    }
+    tryCloseJournal();
 }
 
 /// @brief Set new logging level
@@ -38,16 +32,15 @@ Logger::ReturnCode Logger::setLevel( const Level level )
 {
     const std::string levelStr( levelToString( level ) );
     std::ostringstream msgOss;
-    msgOss << "setLevel(): changing log level to " << levelStr;
-    write( Level::NOTICE, msgOss.str() );
     if( level == _level )
     {
-        msgOss.str( std::string() );
         msgOss << "setLevel(): log level is already " << levelStr;
         write( Level::NOTICE, msgOss.str() );
     }
     else
     {
+        msgOss << "setLevel(): changing log level to " << levelStr;
+        write( Level::NOTICE, msgOss.str() );
         _level = level;
     }
 
@@ -66,22 +59,88 @@ Logger::Level Logger::getLevel() const
 /// return ReturnCode::Ok if successful, else - error code
 Logger::ReturnCode Logger::setJournal( const std::string filePath )
 {
-    ReturnCode retval = ReturnCode::Fatal;
-    if( filePath.empty() )
+    ReturnCode retval{ ReturnCode::Fatal };
+    std::string temp;
+    retval = getAbsolutePath( filePath, temp );
+    if( ReturnCode::JournalUnspecified == retval )
     {
-
+        write( WARNING, "setJournal(): no journal path given" );
     }
-    return ReturnCode::Ok;
+    else if( ReturnCode::Ok == retval )
+    {
+        if( temp == _filePath )
+        {
+            std::stringstream samePathMsg;
+            samePathMsg << "setJournal(): file path is already " << _filePath;
+    write( INFO, samePathMsg.str() );
+            retval = ReturnCode::Ok;
+        }
+        else
+        {
+            tryCloseJournal();
+            _filePath = temp;
+            retval = tryOpenJournal();
+        }
+    }
+    else
+    {
+        write( ERROR, "setJournal(): bad path" );
+        retval = ReturnCode::JournalUnspecified;
+    }
+    return retval;
 }
 
+/// @brief Function to open a journal
+/// @note Is 'public' for cases of manual fix on bad std::ofstream::open()
+/// @note Doesn't reopen if already open
+/// return ReturnCode::Ok if successful, else - error code
+Logger::ReturnCode Logger::tryOpenJournal( void )
+{
+    ReturnCode retval{ ReturnCode::Fatal };
+
+    ReturnCode journalStatus{ isJournalOpen() };
+    if( ReturnCode::Ok == journalStatus )
+    {
+        write( NOTICE, "tryOpenJournal(): journal is already open" );
+        retval = ReturnCode::Ok;
+    }
+    else if( ReturnCode::JournalUnspecified == journalStatus )
+    {
+        write( WARNING, "tryOpenJournal(): journal path is empty" );
+        retval = ReturnCode::JournalUnspecified;
+    }
+    else
+    {
+        // Not an error: ofstream wasn't set yet
+        if( ReturnCode::Fatal == journalStatus )
+        {
+            _fileOut = std::make_unique< std::ofstream >( _filePath.c_str() );
+        }
+
+        if( ReturnCode::Ok == isJournalOpen() )
+        {
+            write( NOTICE, "tryOpenJournal(): opened a journal" );
+            retval = ReturnCode::Ok;
+        }
+        else
+        {
+            retval = ReturnCode::JournalNoopen;
+        }
+    }
+    return retval;
+}
 /// @brief Check if journal is currently open
 /// return true if file is open, else - false
 Logger::ReturnCode Logger::isJournalOpen() const
 {
-    ReturnCode retval = ReturnCode::Fatal;
+    ReturnCode retval{ ReturnCode::Fatal };
     if( !_fileOut )
     {
-        retval = ReturnCode::JournalUnspecified;
+        if( _filePath.empty() )
+        {
+            retval = ReturnCode::JournalUnspecified;
+        }
+        // else ReturnCode::Fatal
     }
     else if( !_fileOut->is_open() )
     {
@@ -131,6 +190,10 @@ bool Logger::isValidLevel( const Logger::Level level )
     {
         isValid = false;
     }
+    /// @brief Function to close the journal
+    /// @note Does nothing with _filePath
+    /// return ReturnCode::Ok if successful, else - error code
+    ReturnCode tryCloseJournal( void );
     return isValid;
 }
 
@@ -156,6 +219,24 @@ const std::string& Logger::levelToString( const Level level )
 
     const static std::string unknownLevelString( "UNKNOWN" );
     return unknownLevelString;
+}
+
+/// @brief Function to close the journal
+/// @note Does nothing with _filePath
+/// return ReturnCode::Ok if successful, else - error code
+Logger::ReturnCode Logger::tryCloseJournal( void )
+{
+    ReturnCode retval{ ReturnCode::Ok };
+    if( !_fileOut || !_fileOut->is_open() )
+    {
+        retval = ReturnCode::JournalNoopen;
+    }
+    else
+    {
+        write( NOTICE, "tryCloseJournal(): closing the journal" );
+        _fileOut->close();
+    }
+    return retval;
 }
 
 /// @brief Get an absolute path of a given path

@@ -49,6 +49,11 @@ public:
     /// param[in] filePath File path to the journal
     /// return ReturnCode::Ok if successful, else - error code
     ReturnCode setJournal( const std::string filePath );
+    /// @brief Function to open a journal
+    /// @note Is 'public' for cases of manual fix on bad std::ofstream::open()
+    /// @note Doesn't reopen if already open
+    /// return ReturnCode::Ok if successful, else - error code
+    ReturnCode tryOpenJournal( void );
     /// @brief Check if journal is currently open
     /// return ReturnCode::Ok if file is open, else - error code
     ReturnCode isJournalOpen( void ) const;
@@ -73,7 +78,13 @@ private:
     std::unique_ptr< std::ofstream > _fileOut;
     std::string _filePath;
     Level _level;
+
+    /// @brief Function to close the journal
+    /// @note Does nothing with _filePath
+    /// return ReturnCode::Ok if successful, else - error code
+    ReturnCode tryCloseJournal( void );
 private:
+    
     /// @brief \"Convert\" logging level to a string
     /// @param[in] level Logging level
     /// @return Logging level text string
