@@ -1,33 +1,35 @@
 #include "logger.h"
 
 #include <ctime>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <map>
 #include <memory>
+#include <system_error>
 #include <string>
 #include <sstream>
 
-
-Logger::Logger( std::unique_ptr< std::ofstream > logFileOut , const Level level ) : _logFileOut( std::move( logFileOut) )
+/// @brief Main logger constructor
+Logger::Logger( const std::string filePath, const Level level ) : _fileOut(), _filePath()
 {
+    ReturnCode isOk = getAbsolutePath( filePath, _filePath );
+    if( ReturnCode::Ok == isOk )
+    {
+        _fileOut = std::make_unique< std::ofstream >( _filePath.c_str() );
+    }
     _level = level;
 }
-Logger::Logger( const std::string journal, const Level level )
-{
-    _logFileOut = std::make_unique< std::ofstream >( journal );
-    _level = level;
-}
-Logger::Logger() : _logFileOut()
+Logger::Logger() : _fileOut(), _filePath()
 {
     _level = Level::DEFAULT;
 }
 Logger::~Logger()
 {
-    if( _logFileOut->is_open() )
+    if( _fileOut->is_open() )
     {
         log( Level::INFO, "Closing the logger" );
-        _logFileOut->close();
+        _fileOut->close();
     }
 }
 
@@ -55,19 +57,19 @@ Logger::Level Logger::getLevel() const
     return _level;
 }
 
-Logger::ReturnCode Logger::setJournal( const std::string journal )
+Logger::ReturnCode Logger::setJournal( const std::string filePath )
 {
     return ReturnCode::Ok;
 }
 
 bool Logger::isJournalOpen() const
 {
-    return _logFileOut->is_open();
+    return _fileOut->is_open();
 }
 
 Logger::ReturnCode Logger::log( const Level level, const std::string msg ) const
 {
-    if( !_logFileOut->is_open() )
+    if( !_fileOut->is_open() )
     {
         return ReturnCode::JournalUnspecified;
     }
@@ -80,8 +82,8 @@ Logger::ReturnCode Logger::log( const Level level, const std::string msg ) const
         fullMsgOss << dateTimeString;
         fullMsgOss << " [ " << std::setw( levelStringMaxLength() ) << levelString << " ] ";
         fullMsgOss << msg << "\n";
-        _logFileOut->write( fullMsgOss.str().c_str(), fullMsgOss.str().length() );
-        _logFileOut->flush();
+        _fileOut->write( fullMsgOss.str().c_str(), fullMsgOss.str().length() );
+        _fileOut->flush();
     }
     return ReturnCode::Ok;
 }
@@ -120,11 +122,41 @@ const std::string& Logger::levelToString( const Level level )
     return unknownLevelString;
 }
 
+
+/// @brief Get absolute path of path
+/// param[in] path Given path
+/// param[out] absolutePath Absolute path from given
+/// return ReturnCode::Ok if successful, else - error type
+Logger::ReturnCode Logger::getAbsolutePath( const std::string& path, std::string& absolutePath )
+{
+    ReturnCode retval{ ReturnCode::Fatal };
+    if( path.empty() )
+    {
+        absolutePath = "";
+        retval = ReturnCode::JournalUnspecified;
+    }
+    else
+    {
+        std::error_code error;
+        const std::string temp( std::filesystem::absolute( std::filesystem::path( path ).c_str(), error ) );
+        if( error.value() )
+        {
+            absolutePath = "";
+            // ReturnCode::Fatal
+        }
+        else
+        {
+            absolutePath = temp;
+            retval = ReturnCode::Ok;
+        }
+    }
+    return retval;
+}
 /// @brief Max possible length for a level string
 /// return Max length for a level string
 inline constexpr int Logger::levelStringMaxLength()
 {
-    std::size_t maxLength = 0;
+    std::size_t maxLength{ 0 };
     for( int level = Level::BEGIN; level <= Level::END + 1; ++level )
     {
         const std::size_t currentStringLength{ levelToString( static_cast< Level >( level ) ).length() };
@@ -135,7 +167,6 @@ inline constexpr int Logger::levelStringMaxLength()
     }
     return static_cast< int >( maxLength );
 }
-
 /// @brief Get current date and time string
 /// param[out] dateTimeStr Resulting date and time string
 const std::string Logger::getDateTimeString()

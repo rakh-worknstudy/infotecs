@@ -35,31 +35,35 @@ Logger::ReturnCode initLogger( const std::string journal, const Logger::Level le
         std::cerr << "Unable to init a logger: " << returnCodeToString( retval ) << std::endl;
     };
 
-    // logger = nullptr;
     if( journal.empty() )
     {
+        // No journal path given
         retval = Logger::ReturnCode::JournalUnspecified;
     }
     else if( !Logger::isValidLevel( level ) )
     {
+        // Invalid logging level
         retval = Logger::ReturnCode::LevelUnknown;
     }
     else
     {
+        // Trying to initialize a journal
         std::string journal( "test.txt" );
-        std::unique_ptr< std::ofstream > logFileOut = std::make_unique< std::ofstream >( journal );
-        if( !logFileOut->is_open() )
+        logger = new Logger( journal, level );
+        if( nullptr != logger )
         {
-            retval = Logger::ReturnCode::JournalNoopen;
-        }
-        else if( nullptr != ( logger = new Logger( journal, level ) ) )
-        {
-            retval = Logger::ReturnCode::Ok;
-        }
-        else
-        {
-            logFileOut->close();
-        }
+            // No fail upon new
+            if( logger->isJournalOpen() )
+            {
+                // Successful initalization
+                retval = Logger::ReturnCode::Ok;
+            }
+            else
+            {
+                // Journal didn't open
+                retval = Logger::ReturnCode::JournalNoopen;
+            }
+        }  // else Logger() failed (FATAL)
     }
 
     if( Logger::ReturnCode::Ok != retval )
