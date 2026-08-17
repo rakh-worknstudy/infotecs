@@ -19,6 +19,7 @@ $(LIBS): lib%.so: %.o
 
 clean:
 	rm $(OBJS)
+	rm $(LIBS)
 
 build-debug: $(LIBS) mkdirs
 	cp $(LIBS) $(DIR_DEBUG)/lib/
