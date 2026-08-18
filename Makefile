@@ -25,7 +25,7 @@ ifndef journal
 	$(error journal is undefined)
 endif
 ifndef level
-	$(error level is undefined)
+	echo level is undefined
 endif
 	(cd ./$(BUILD)/$(RELEASE); ./$(EXEC) $(journal) $(level))
 

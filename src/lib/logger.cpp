@@ -210,7 +210,9 @@ Logger::ReturnCode Logger::tryOpenJournalImpl( void )
 
         if( ReturnCode::Ok == isJournalOpenImpl() )
         {
-            writeImpl( NOTICE, "tryOpenJournalImpl(): opened a journal" );
+            std::ostringstream openJournalOss;
+            openJournalOss << "tryOpenJournalImpl(): opened a journal with level " << levelToString( _level );
+            writeImpl( NOTICE, openJournalOss.str() );
             retval = ReturnCode::Ok;
         }
         else

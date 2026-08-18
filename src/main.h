@@ -14,6 +14,10 @@ Logger::ReturnCode init( const std::string journal, const Logger::Level level, L
 /// @param[in] logger Logger to close
 /// @return Logger::ReturnCode::Ok if successful, else - error code
 Logger::ReturnCode close( Logger*& logger );
+/// @brief User-unfriendly interface
+/// @param[in] logger Logger
+/// @return Logger::ReturnCode::Ok if successful, else - error code
+Logger::ReturnCode fun( Logger* logger );
 
 int main( int argc, char** argv );
 #else  // _BUILD_TEST

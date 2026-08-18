@@ -5,8 +5,10 @@
 
 #else  // _BUILD_TEST
 #   include <cstdlib>
+#   include <ctime>
 #   include <iostream>
 #   include <map>
+#   include <thread>
 
 #   include "lib/logger.h"
 #endif  // ndef _BUILD_TEST
@@ -37,8 +39,15 @@ namespace
     static int stringToLevel( const std::string str, Logger::Level& level );
     /// @brief Get return code name as a string
     /// @param[in] value Return code
-    /// return Return code as a string
+    /// @return Return code as a string
     static const std::string returnCodeToString( const Logger::ReturnCode value );
+
+    void funMenu( Logger* logger );
+    int funMenuSetLevel( Logger* logger );
+    int funMenuSetJournal( Logger* logger );
+    int funMenuWrite( Logger* logger );
+    int funMenuGetLevel( Logger* logger );
+    int funMenuGetJournal( Logger* logger );
 }  // namespace
 
 /// @brief Initialize logger
@@ -107,6 +116,24 @@ Logger::ReturnCode close( Logger*& logger )
     }
     return retval;
 }
+
+/// @brief User-unfriendly interface
+/// @param[in] logger Logger
+/// @return Logger::ReturnCode::Ok if successful, else - error code
+Logger::ReturnCode fun( Logger* logger )
+{
+    Logger::ReturnCode retval{ Logger::ReturnCode::Fatal };
+    if( nullptr == logger )
+    {
+        retval = Logger::ReturnCode::LoggerNullptr;
+    }
+    else
+    {
+        funMenu( logger );
+        retval = Logger::ReturnCode::Ok;
+    }
+    return retval;
+}
 #endif  // ndef _BUILD_TEST
 
 #ifdef _BUILD_TEST
@@ -130,6 +157,7 @@ int main( int argc, char** argv )
     }
     else if( Logger::ReturnCode::Ok == init( journal, level, logger ) )
     {
+        fun( logger );
         if( Logger::ReturnCode::Ok == close( logger ) )
         {
             retval = 0;
@@ -248,6 +276,119 @@ namespace
             return search->second;
         }
         return unknownReturnCodeString;
+    }
+
+    void funMenu( Logger* logger )
+    {
+        char ch;
+
+        do
+        {
+            std::cout << "\033[2J\033[1;1H";
+            std::cout << "1 - setLevel\n2 - setJournal\n3 - write\n4 - getLevel\n5 - getJournal\n0 - Exit" << std::endl;
+            ch = std::cin.get();
+            switch( ch )
+            {
+                case '1':
+                    funMenuSetLevel( logger );
+                    break;
+                case '2':
+                    funMenuSetJournal( logger );
+                    break;
+                case '3':
+                    funMenuWrite( logger );
+                    break;
+                case '4':
+                    funMenuGetLevel( logger );
+                    break;
+                case '5':
+                    funMenuGetJournal( logger );
+                    break;
+                default:
+                    break;
+            }
+        } while( ch != '0' );
+    }
+    int funMenuSetLevel( Logger* logger )
+    {
+        std::cout << "\033[2J\033[1;1H";
+        Logger::Level level;
+
+        std::string levelStr;
+        std::cout << "Enter level [debug, info, notice, warning, error, critical]: ";
+        std::cin >> levelStr;
+        if( 0 != stringToLevel( levelStr, level ) )
+        {
+            std::cout << "Bad input" << std::endl;
+        }
+        else
+        {
+            std::cout << "Trying to setLevel()" << std::endl;
+            logger->setLevel( level );
+        }
+
+        std::cin.get();
+        std::cin.get();
+
+        return 0;
+    }
+    int funMenuSetJournal( Logger* logger )
+    {
+        std::cout << "\033[2J\033[1;1H";
+        std::string journal;
+
+        std::cout << "Enter journal path: ";
+        std::cin >> journal;
+        std::cout << "Trying to setJournal(" << journal << ")" << std::endl;
+        logger->setJournal( journal );
+
+        std::cin.get();
+        std::cin.get();
+
+        return 0;
+    }
+    int funMenuWrite( Logger* logger )
+    {
+        std::cout << "\033[2J\033[1;1H";
+        Logger::Level level;
+        std::string msg;
+
+        std::string levelStr;
+        std::cout << "Enter level [debug, info, notice, warning, error, critical]: ";
+        std::cin >> levelStr;
+        if( 0 != stringToLevel( levelStr, level ) )
+        {
+            std::cout << "Bad input" << std::endl;
+        }
+        else
+        {
+            std::cout << "Enter message: ";
+            std::cin >> msg;
+            std::cout << "Trying to write()" << std::endl;
+            logger->write( level, msg );
+        }
+
+        std::cin.get();
+        std::cin.get();
+
+        return 0;
+    }
+    int funMenuGetLevel( Logger* logger )
+    {
+        std::cout << "Current level is: " << logger->levelToString( logger->getLevel() ) << std::endl;
+        std::cin.get();
+        std::cin.get();
+
+        return 0;
+    }
+    int funMenuGetJournal( Logger* logger )
+    {
+        std::cout << "Current journal is: " << logger->getJournal() << std::endl;
+
+        std::cin.get();
+        std::cin.get();
+
+        return 0;
     }
 }  // namespace
 
