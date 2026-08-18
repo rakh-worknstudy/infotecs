@@ -42,11 +42,23 @@ namespace
     /// @return Return code as a string
     static const std::string returnCodeToString( const Logger::ReturnCode value );
 
+    /// @brief Main menu
+    /// @param[in] logger Logger
     void funMenu( Logger* logger );
+    /// @brief setLevel menu
+    /// @param[in] logger Logger
     int funMenuSetLevel( Logger* logger );
+    /// @brief setJournal menu
+    /// @param[in] logger Logger
     int funMenuSetJournal( Logger* logger );
+    /// @brief write menu
+    /// @param[in] logger Logger
     int funMenuWrite( Logger* logger );
+    /// @brief getLevel menu
+    /// @param[in] logger Logger
     int funMenuGetLevel( Logger* logger );
+    /// @brief getJournal menu
+    /// @param[in] logger Logger
     int funMenuGetJournal( Logger* logger );
 }  // namespace
 
@@ -278,6 +290,8 @@ namespace
         return unknownReturnCodeString;
     }
 
+    /// @brief Main menu
+    /// @param[in] logger Logger
     void funMenu( Logger* logger )
     {
         char ch;
@@ -309,6 +323,8 @@ namespace
             }
         } while( ch != '0' );
     }
+    /// @brief setLevel menu
+    /// @param[in] logger Logger
     int funMenuSetLevel( Logger* logger )
     {
         std::cout << "\033[2J\033[1;1H";
@@ -332,6 +348,8 @@ namespace
 
         return 0;
     }
+    /// @brief setJournal menu
+    /// @param[in] logger Logger
     int funMenuSetJournal( Logger* logger )
     {
         std::cout << "\033[2J\033[1;1H";
@@ -347,6 +365,8 @@ namespace
 
         return 0;
     }
+    /// @brief write menu
+    /// @param[in] logger Logger
     int funMenuWrite( Logger* logger )
     {
         std::cout << "\033[2J\033[1;1H";
@@ -373,6 +393,8 @@ namespace
 
         return 0;
     }
+    /// @brief getLevel menu
+    /// @param[in] logger Logger
     int funMenuGetLevel( Logger* logger )
     {
         std::cout << "Current level is: " << logger->levelToString( logger->getLevel() ) << std::endl;
@@ -381,6 +403,8 @@ namespace
 
         return 0;
     }
+    /// @brief getJournal menu
+    /// @param[in] logger Logger
     int funMenuGetJournal( Logger* logger )
     {
         std::cout << "Current journal is: " << logger->getJournal() << std::endl;

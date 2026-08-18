@@ -203,11 +203,13 @@ Logger::ReturnCode Logger::tryOpenJournalImpl( void )
         {
             _fileOut = std::make_unique< std::ofstream >( _filePath.c_str() );
         }
+        // ofstream exists, but not open
         else if( ReturnCode::JournalNoopen == journalStatus )
         {
             _fileOut->open( _filePath.c_str() );
         }
 
+        // Check afterwards
         if( ReturnCode::Ok == isJournalOpenImpl() )
         {
             std::ostringstream openJournalOss;
