@@ -5,6 +5,8 @@
 #include <fstream>
 #include <iostream>
 
+#include "test.h"
+
 namespace
 {
     /// @brief Get return code name as a string
@@ -12,15 +14,6 @@ namespace
     /// return Return code as a string
     static const std::string returnCodeToString( const Logger::ReturnCode value );
 }  // namespace
-
-
-namespace test
-{
-    int logLevel( Logger* logger, const Logger::Level level, const char* msg );
-    int logEachLevel( Logger* logger );
-    int iterateEachLevelAndLogEachLevel( Logger* logger );
-}  // namespace test
-
 
 /// @brief Logger initialization function
 /// @param[in] journal Journal path
@@ -135,16 +128,8 @@ Logger::ReturnCode log( Logger* logger, const Logger::Level level, const std::st
 
 int main( void )
 {
-    do
-    {
-        Logger *logger = nullptr;
-        if( Logger::ReturnCode::Ok != initLogger( "text.txt", Logger::Level::DEBUG, logger ) ) break;
-        if( 0 != test::iterateEachLevelAndLogEachLevel( logger ) ) break;
-        if( Logger::ReturnCode::Ok != closeLogger( logger ) ) break;
-        return 0;
-    } while( false );
-
-    return -1;
+    Test test;
+    return test.run();
 }
 
 
@@ -172,61 +157,4 @@ namespace
     }
 }
 
-
-namespace test
-{
-    int logLevel( Logger* logger, const Logger::Level level, const char* msg )
-    {
-        std::cout << "Logging " << Logger::levelToString( level ) << " message" << std::endl;
-        if( Logger::ReturnCode::Ok != log( logger, level, msg ) )
-        {
-            std::cerr << "FAIL" << std::endl;
-            return -1;
-        }
-        return 0;
-    }
-    int logEachLevel( Logger* logger )
-    {
-        do
-        {
-            if( 0 != logLevel( logger, Logger::Level::DEBUG, "Yeah, science!" ) ) break;
-            if( 0 != logLevel( logger, Logger::Level::INFO, "Roses are red" ) ) break;
-            if( 0 != logLevel( logger, Logger::Level::NOTICE, "For your concern" ) ) break;
-            if( 0 != logLevel( logger, Logger::Level::WARNING, "You better not do that" ) ) break;
-            if( 0 != logLevel( logger, Logger::Level::ERROR, "Told you not to do that!" ) ) break;
-            if( 0 != logLevel( logger, Logger::Level::CRITICAL, "It's over..." ) ) break;
-            return 0;
-        } while( 0 );
-        return -1;
-    }
-    int iterateEachLevelAndLogEachLevel( Logger* logger )
-    {
-        std::cout << "Trying to iterate all log levels..." << std::endl; 
-        for( int level = Logger::Level::FIRST; level <= Logger::Level::LAST; ++level )
-        {
-            const Logger::Level levelCast{ static_cast< Logger::Level >( level ) };
-            std::cout << "Setting log level to " << Logger::levelToString( levelCast ) << std::endl;
-            Logger::ReturnCode retval = logger->setLevel( levelCast );
-            if( Logger::ReturnCode::Ok != retval )
-            {
-                 std::cerr << "FAIL: " << returnCodeToString( retval );
-                 return -1;
-            }
-            const Logger::Level levelGot( logger->getLevel() );
-            // std::cout << "Got log level: " << Logger::levelToString( levelGot ) << std::endl;
-            // if( levelCast != levelGot )
-            // {
-            //     std::cerr << "FAIL: level to setLevel(level) and getLevel() differ" << std::endl;
-            //     return -1;
-            // }
-            if( 0 != logEachLevel( logger ) )
-            {
-                std::cerr << "FAIL: unable to logEachLevel()" << std::endl;
-                return -1;
-            }
-        }
-        std::cout << "Iterating is complete" << std::endl;
-        return 0; 
-    }
-}  // namespace test
 

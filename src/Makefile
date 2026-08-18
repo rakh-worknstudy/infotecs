@@ -24,7 +24,7 @@ build-debug: $(OBJS) mkdirs
 build-release: $(OBJS) mkdirs
 	cp $(EXEC) $(DIR_RELEASE)
 
-clean-all:
+clean-all: clean
 	$(MAKE) -C ./lib clean
 clean:
 	rm $(OBJS) $(EXEC)

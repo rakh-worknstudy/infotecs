@@ -107,6 +107,9 @@ public:
     /// @param[in] filePath File path to the journal
     /// @return ReturnCode::Ok if successful, else - error code
     ReturnCode setJournal( const std::string filePath );
+    /// @brief Get current journal path
+    /// @return Journal path
+    const std::string getJournal( void );
     /// @brief Queue opening a journal
     /// @note Is 'public' for cases of manual fix on bad std::ofstream::open()
     /// @note Doesn't reopen if already open
@@ -140,8 +143,9 @@ private:
     std::atomic< Level > _level;
     std::queue< Action > _actionQueue;    // Queue of actions
 
-    std::mutex _actionQueueMutex;         // Mutex exceptional to _actionQueue
-    std::mutex _fileOutMutex;             // Mutex exceptional to _fileOut
+    std::mutex _actionQueueMutex;         // Mutex exclusive to _actionQueue
+    std::mutex _fileOutMutex;             // Mutex exclusive to _fileOut
+    std::mutex _filePathMutex;            // Mutex exclusive to _filePath
     std::condition_variable _actionCV;    // To notify on addAction()
 
     std::thread _actionThread;            // actionQueueJob() thread

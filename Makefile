@@ -2,6 +2,8 @@ include make.cfg
 
 .PHONY: build
 
+all: build clean
+
 build:
 	$(MAKE) -C ./$(SRC) build
 build-test:

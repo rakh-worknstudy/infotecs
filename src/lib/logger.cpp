@@ -62,7 +62,6 @@ Logger::ReturnCode Logger::setLevel( const Level level )
 /// @return Logging level
 Logger::Level Logger::getLevel() const
 {
-    // just in case
     return _level;
 }
 
@@ -75,6 +74,13 @@ Logger::ReturnCode Logger::setJournal( const std::string filePath )
     pathAction.type = Action::Type::changePath;
     pathAction.data.str = filePath;
     return addAction( pathAction );
+}
+/// @brief Get current journal path
+/// @return Journal path
+const std::string Logger::getJournal( void )
+{
+    std::lock_guard< std::mutex > noChangePath( _filePathMutex );
+    return _filePath;
 }
 
 /// @brief Queue opening a journal
@@ -196,6 +202,10 @@ Logger::ReturnCode Logger::tryOpenJournalImpl( void )
         if( ReturnCode::Fatal == journalStatus )
         {
             _fileOut = std::make_unique< std::ofstream >( _filePath.c_str() );
+        }
+        else if( ReturnCode::JournalNoopen == journalStatus )
+        {
+            _fileOut->open( _filePath.c_str() );
         }
 
         if( ReturnCode::Ok == isJournalOpenImpl() )
@@ -335,14 +345,14 @@ Logger::ReturnCode Logger::setJournalImpl( const std::string& filePath )
         else
         {
             tryCloseJournalImpl();
+            _filePathMutex.lock();
             _filePath = temp;
+            _filePathMutex.unlock();
             retval = tryOpenJournalImpl();
         }
     }
     else
     {
-    /// @brief Thread function for queue job
-    void actionQueueJob( void );
         writeImpl( ERROR, "setJournal(): bad path" );
         retval = ReturnCode::JournalUnspecified;
     }
@@ -482,6 +492,10 @@ void Logger::actionQueueJob( void )
                 if( _preventDestructMutex.try_lock() )
                 {
                     ReturnCode retval{ doAction( action ) };
+		    if( ReturnCode::Ok != retval )
+		    {
+                        writeImpl( Level::ERROR, "actionQueueJob(): something has happened" );
+		    }
                     _preventDestructMutex.unlock();
                 }
             }
