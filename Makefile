@@ -4,10 +4,11 @@ include make.cfg
 
 all: build clean
 
-build:
-	$(MAKE) -C ./$(SRC) build
-build-test:
-	$(MAKE) -C ./$(SRC) build-test
+build: build-debug
+build-debug:
+	$(MAKE) -C ./$(SRC) build-debug
+build-release:
+	$(MAKE) -C ./$(SRC) build-release
 
 clean:
 	$(MAKE) -C ./$(SRC) clean-all
@@ -18,7 +19,13 @@ mkdirs:
 
 run: run-debug
 run-debug:
-	(cd ./$(BUILD)/$(DEBUG); ./$(EXEC))
+	(cd ./$(BUILD)/$(DEBUG); ./$(TEST_EXEC))
 run-release:
-	(cd ./$(BUILD)/$(RELEASE); ./$(EXEC))
+ifndef journal
+	$(error journal is undefined)
+endif
+ifndef level
+	$(error level is undefined)
+endif
+	(cd ./$(BUILD)/$(RELEASE); ./$(EXEC) $(journal) $(level))
 
