@@ -171,6 +171,12 @@ private:
     /// @param[out] absolutePath Absolute path from given
     /// @return ReturnCode::Ok if successful, else - error code
     static ReturnCode getAbsolutePath( const std::string& path, std::string& absolutePath );
+    /// @brief Check if it's a filename
+    /// @return ReturnCode::Ok if it is, else - JournalUnspecified
+    static ReturnCode checkPath( const std::string& path );
+    /// @brief Create directories
+    /// @param[in] path Path
+    static void createDirectories( const std::string& path );
     /// @brief Get current date and time string
     /// @return Resulting date and time string
     static const std::string getDateTimeString( void );

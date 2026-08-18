@@ -269,6 +269,42 @@ Logger::ReturnCode Logger::getAbsolutePath( const std::string& path, std::string
     }
     return retval;
 }
+
+/// @brief Check if it's a filename
+/// @return ReturnCode::Ok if it is, else - JournalUnspecified
+Logger::ReturnCode Logger::checkPath( const std::string& path )
+{
+    ReturnCode retval{ ReturnCode::Fatal };
+    std::filesystem::path fsPath( path );
+    if( !fsPath.has_filename() )
+    {
+        retval = ReturnCode::JournalUnspecified;
+    }
+    else
+    {
+        static const std::string dotAt{ "." };
+        static const std::string dotUp{ ".." };
+        std::filesystem::path fileName = fsPath.filename();
+        if( dotAt == fileName || dotUp == fileName )
+        {
+            retval = ReturnCode::JournalUnspecified;
+        }
+        else
+        {
+            retval = ReturnCode::Ok;
+        }
+    }
+    return retval;
+}
+
+/// @brief Create directories
+/// @param[in] path Path
+void Logger::createDirectories( const std::string& path )
+{
+    std::filesystem::path fspath( std::filesystem::path( path ).remove_filename() );
+    std::filesystem::create_directories( fspath );
+}
+
 /// @brief Max possible length for a level string
 /// @return Max length for a level string
 inline constexpr int Logger::levelStringMaxLength()
@@ -342,12 +378,21 @@ Logger::ReturnCode Logger::setJournalImpl( const std::string& filePath )
             writeImpl( INFO, samePathMsg.str() );
             retval = ReturnCode::Ok;
         }
+        else if( ReturnCode::Ok != checkPath( temp ) )
+        {
+            std::ostringstream badPathMsg;
+            // log given string, not post-processed
+            badPathMsg << "setJournal(): bad path " << filePath;
+            writeImpl( WARNING, badPathMsg.str() );
+            retval = ReturnCode::JournalUnspecified;
+        }
         else
         {
             tryCloseJournalImpl();
             _filePathMutex.lock();
             _filePath = temp;
             _filePathMutex.unlock();
+            createDirectories( temp );
             retval = tryOpenJournalImpl();
         }
     }
@@ -492,10 +537,10 @@ void Logger::actionQueueJob( void )
                 if( _preventDestructMutex.try_lock() )
                 {
                     ReturnCode retval{ doAction( action ) };
-		    if( ReturnCode::Ok != retval )
-		    {
+                    if( ReturnCode::Ok != retval )
+                    {
                         writeImpl( Level::ERROR, "actionQueueJob(): something has happened" );
-		    }
+                    }
                     _preventDestructMutex.unlock();
                 }
             }
